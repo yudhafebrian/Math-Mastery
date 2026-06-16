@@ -102,7 +102,7 @@ export default function MatchPanel({ facts, domain, roundNumber, totalRounds, on
 
     const elapsed = Date.now() - roundStartTime
 
-    if (pairIdx === selectedLeft) {
+    if (pairs[pairIdx].rightText === pairs[selectedLeft].rightText) {
       // Correct match — record per-pair time
       const newMatched = new Set(matched)
       newMatched.add(selectedLeft)
