@@ -1,0 +1,624 @@
+# Math Fact Mastery MVP
+
+You are a senior React developer, product designer, educational game designer, and software architect.
+
+Build a simple MVP for a math fact practice game for elementary school children.
+
+The goal is not to create a commercial learning platform.
+
+The goal is to help one child build automatic recall of basic addition and multiplication facts.
+
+Keep the implementation simple.
+
+Prefer simplicity over completeness.
+
+Avoid over-engineering.
+
+---
+
+# Core Goal
+
+Help children memorize arithmetic facts until recall becomes automatic.
+
+Track:
+
+* Accuracy
+* Response Time
+
+Show parents which facts are strong and which facts still need practice.
+
+---
+
+# Technology
+
+Use:
+
+* React
+* Vite
+* TypeScript
+* TailwindCSS
+* Supabase
+
+Do not use:
+
+* Next.js
+* Redux
+* Complex backend services
+* Game engines
+
+---
+
+# Users
+
+Parent
+
+Child
+
+No complex authentication required.
+
+Simple email login is sufficient.
+
+---
+
+# Child Profiles
+
+Each child has:
+
+* id
+* name
+* avatar
+
+A parent may create multiple children.
+
+---
+
+# Learning Philosophy
+
+Children should learn skills in sequence.
+
+A child should not move to harder skills before mastering the foundation.
+
+Because of this, skill unlocks are required.
+
+---
+
+# Addition Skills
+
+Skill 1
+
+Make 10
+
+Examples:
+
+1+9
+9+1
+2+8
+8+2
+3+7
+7+3
+4+6
+6+4
+5+5
+
+---
+
+Skill 2
+
+Doubles
+
+Examples:
+
+1+1
+2+2
+3+3
+...
+9+9
+
+---
+
+Skill 3
+
+Near Doubles
+
+Examples:
+
+4+5
+5+4
+5+6
+6+5
+6+7
+7+6
+7+8
+8+7
+8+9
+9+8
+
+Strategy:
+
+Use doubles then add one.
+
+---
+
+Skill 4
+
+Add 9
+
+Examples:
+
+9+2
+2+9
+9+3
+3+9
+...
+9+9
+
+Strategy:
+
+Make 10 first.
+
+---
+
+Skill 5
+
+Mixed Addition
+
+All remaining addition facts.
+
+---
+
+# Multiplication Skills
+
+Skill 1
+
+×1
+
+---
+
+Skill 2
+
+×10
+
+---
+
+Skill 3
+
+×2
+
+Strategy:
+
+Double the number.
+
+---
+
+Skill 4
+
+×5
+
+Strategy:
+
+Answers end with 0 or 5.
+
+---
+
+Skill 5
+
+×4
+
+Strategy:
+
+Double then double again.
+
+---
+
+Skill 6
+
+×3
+
+Strategy:
+
+Multiply by 2 then add one more group.
+
+---
+
+Skill 7
+
+×6
+
+Strategy:
+
+Multiply by 5 then add one more group.
+
+---
+
+Skill 8
+
+×9
+
+Strategy:
+
+Digits add up to 9.
+
+---
+
+Skill 9
+
+×7
+
+Memorization.
+
+---
+
+Skill 10
+
+×8
+
+Memorization.
+
+---
+
+# Important Rule
+
+Do NOT merge commutative facts.
+
+Treat:
+
+6+7
+
+and
+
+7+6
+
+as separate facts.
+
+Treat:
+
+7×8
+
+and
+
+8×7
+
+as separate facts.
+
+Track them independently.
+
+---
+
+# Skill Unlock
+
+A skill becomes unlocked when:
+
+Accuracy >= 90%
+
+AND
+
+Average Response Time <= 3 seconds
+
+for the current skill.
+
+Only then may the next skill be practiced.
+
+---
+
+# Question Modes
+
+Only implement:
+
+1. Fill In Blank
+2. Multiple Choice
+3. True / False
+
+Do not implement any other game modes.
+
+---
+
+# Question Recording
+
+For every answer save:
+
+child_id
+
+fact_id
+
+is_correct
+
+response_time_ms
+
+created_at
+
+---
+
+# Adaptive Practice
+
+Facts that are frequently wrong should appear more often.
+
+Facts with slow response times should appear more often.
+
+Facts that are consistently correct and fast should appear less often.
+
+Keep the algorithm simple.
+
+No advanced mastery formulas required.
+
+---
+
+# Feedback
+
+If the answer is wrong:
+
+Show:
+
+Correct answer
+
+And a simple strategy.
+
+Example:
+
+Question:
+
+6+7
+
+Show:
+
+Correct Answer: 13
+
+Quick Trick:
+
+6+6 = 12
+
+Add one more
+
+13
+
+---
+
+Example:
+
+Question:
+
+9+5
+
+Show:
+
+Correct Answer: 14
+
+Quick Trick:
+
+Make 10
+
+9+5
+
+10+4
+
+14
+
+---
+
+Example:
+
+Question:
+
+7×8
+
+Show:
+
+Correct Answer: 56
+
+Practice and remember this fact.
+
+Do not invent shortcuts.
+
+---
+
+# Session Design
+
+Each session contains:
+
+10 questions
+
+After 10 questions:
+
+Show summary screen.
+
+Display:
+
+Correct Answers
+
+Incorrect Answers
+
+Average Response Time
+
+---
+
+# Parent Dashboard
+
+Display:
+
+## Skill Progress
+
+Example:
+
+Make 10
+
+90%
+
+Unlocked
+
+---
+
+Doubles
+
+75%
+
+In Progress
+
+---
+
+Near Doubles
+
+Locked
+
+---
+
+## Weak Facts
+
+Display:
+
+Fact
+
+Accuracy
+
+Average Response Time
+
+Sort weakest facts first.
+
+---
+
+Example:
+
+6+7
+
+Accuracy 50%
+
+Average Time 8s
+
+---
+
+7×8
+
+Accuracy 30%
+
+Average Time 12s
+
+---
+
+## Strong Facts
+
+Display:
+
+Facts with:
+
+Accuracy >= 90%
+
+AND
+
+Average Response Time <= 3 seconds
+
+---
+
+# Database
+
+Create only these tables:
+
+children
+
+facts
+
+attempts
+
+Keep schema simple.
+
+Avoid unnecessary tables.
+
+---
+
+# Facts
+
+Generate facts automatically.
+
+Addition:
+
+1+1 through 9+9
+
+Store all ordered pairs.
+
+Total:
+
+81 facts.
+
+---
+
+Multiplication:
+
+1×1 through 10×10
+
+Store all ordered pairs.
+
+Total:
+
+100 facts.
+
+---
+
+# Fact Fields
+
+id
+
+domain
+
+skill
+
+question
+
+answer
+
+strategy
+
+---
+
+# Attempts Fields
+
+id
+
+child_id
+
+fact_id
+
+is_correct
+
+response_time_ms
+
+created_at
+
+---
+
+# UI
+
+Mobile first.
+
+Large buttons.
+
+Large text.
+
+Fast interactions.
+
+Minimal distractions.
+
+No ads.
+
+No coins.
+
+No achievements.
+
+No streaks.
+
+No gamification systems.
+
+Focus entirely on learning.
+
+---
+
+# Deliverables
+
+Generate:
+
+1. Folder structure
+2. Database schema
+3. Supabase SQL
+4. Seed script
+5. React pages
+6. React components
+7. Adaptive practice logic
+8. Parent dashboard
+
+Keep everything as simple as possible while maintaining educational effectiveness.
