@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
 import { Child, Fact, Domain, Tab, AnswerRecord } from './types'
 import { ADDITION_SKILL_ORDER, MULTIPLY_SKILL_ORDER } from './lib/gameData'
@@ -42,6 +42,9 @@ export default function App() {
   const [allAttempts, setAllAttempts] = useState<any[]>([])
 
   const [appView, setAppView] = useState<AppView>('home')
+
+  // Track pending save promises so endSession can await them all
+  const pendingSavesRef = useRef<Promise<void>[]>([])
 
   // Session state
   const [sessionFacts, setSessionFacts] = useState<Fact[]>([])
@@ -121,6 +124,7 @@ export default function App() {
     setSessionMatchRound(0)
     setPhase('fact')
     setSessionResult(null)
+    pendingSavesRef.current = []
     setAppView('playing')
   }
 
@@ -136,7 +140,8 @@ export default function App() {
     if (fid === undefined) return
     const record: AnswerRecord = { factId: fid, correct, responseTimeMs: timeMs }
     setSessionAttempts(prev => [...prev, record])
-    await saveAttempt(record)
+    const savePromise = saveAttempt(record)
+    pendingSavesRef.current.push(savePromise)
   }
 
   const advanceAfterFact = () => {
@@ -154,7 +159,10 @@ export default function App() {
 
   const onMatchComplete = async (results: AnswerRecord[]) => {
     setSessionAttempts(prev => [...prev, ...results])
-    for (const r of results) await saveAttempt(r)
+    for (const r of results) {
+      const savePromise = saveAttempt(r)
+      pendingSavesRef.current.push(savePromise)
+    }
     const nextIdx = (sessionMatchRound) * FACTS_PER_ROUND
     if (nextIdx >= sessionFacts.length) {
       endSession()
@@ -165,6 +173,10 @@ export default function App() {
   }
 
   const endSession = async () => {
+    // Wait for all pending DB saves to complete before reading back fresh data
+    await Promise.all(pendingSavesRef.current)
+    pendingSavesRef.current = []
+
     const freshAttempts = await fetchAttempts()
     const atts = sessionAttempts
     const correctCount = atts.filter(a => a.correct).length
@@ -188,10 +200,13 @@ export default function App() {
     setAppView('summary')
   }
 
-  const handleTabChange = (tab: Tab) => {
+  const handleTabChange = async (tab: Tab) => {
     setCurrentTab(tab)
-    if (tab !== 'practice') { setAppView('home') }
-    else if (appView !== 'home' || currentTab !== 'practice') { fetchAttempts() }
+    if (tab !== 'practice') {
+      setAppView('home')
+    } else if (appView !== 'home' || currentTab !== 'practice') {
+      await fetchAttempts()
+    }
   }
 
   const currentMode: GameMode = MODES[sessionFactIndex % MODES.length]

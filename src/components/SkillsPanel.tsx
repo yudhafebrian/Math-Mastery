@@ -22,50 +22,94 @@ export default function SkillsPanel({ child }: SkillsPanelProps) {
     fetchSkills()
   }, [child.id])
 
-  const processSkills = (order: string[], skillData: Record<string, { correct: number; total: number; totalTime: number }>): SkillStat[] => {
+  const SESSION_GAP_MS = 5 * 60 * 1000
+
+  const getCutoffAt = (items: any[]): number => {
+    if (items.length === 0) return 0
+    const sorted = [...items].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+    const latestTime = new Date(sorted[0].created_at).getTime()
+    let cutoff = latestTime
+    for (let i = 1; i < sorted.length; i++) {
+      const itemTime = new Date(sorted[i].created_at).getTime()
+      if (latestTime - itemTime > SESSION_GAP_MS) break
+      cutoff = Math.min(cutoff, itemTime)
+    }
+    return cutoff
+  }
+
+  // Hybrid: status pakai seluruh history, display stats pakai session terbaru
+  const computeMastery = (items: any[]): { accuracy: number; avgTime: number; mastered: boolean } => {
+    if (items.length === 0) return { accuracy: 0, avgTime: 0, mastered: false }
+    const correct = items.filter(a => a.is_correct).length
+    const accuracy = Math.round((correct / items.length) * 100)
+    const avg = items.reduce((s, a) => s + (a.response_time_ms || 0), 0) / items.length / 1000
+    const mastered = accuracy >= 90 && avg <= 5
+    return { accuracy, avgTime: avg, mastered }
+  }
+
+  const computeSessionStats = (items: any[], cutoffAt: number): { accuracy: number; avgTime: number } => {
+    const sessionItems = items.filter(a => new Date(a.created_at).getTime() >= cutoffAt)
+    if (sessionItems.length === 0) {
+      // Fallback: pakai seluruh history
+      return computeMastery(items)
+    }
+    const correct = sessionItems.filter(a => a.is_correct).length
+    const accuracy = Math.round((correct / sessionItems.length) * 100)
+    const avg = sessionItems.reduce((s, a) => s + (a.response_time_ms || 0), 0) / sessionItems.length / 1000
+    return { accuracy, avgTime: avg }
+  }
+
+  const processSkills = (order: string[], allAttempts: any[]): SkillStat[] => {
+    const cutoffAt = getCutoffAt(allAttempts)
+    const bySkill: Record<string, any[]> = {}
+    for (const a of allAttempts) {
+      const skill = a.facts?.skill
+      if (!skill) continue
+      if (!bySkill[skill]) bySkill[skill] = []
+      bySkill[skill].push(a)
+    }
+
     let unlocked = true
     return order.map(name => {
-      const data = skillData[name]
-      if (!data) {
-        return { name, accuracy: 0, avgTime: 0, status: unlocked ? 'prog' : 'lock' }
-      }
-      const acc = Math.round((data.correct / data.total) * 100)
-      const avg = data.totalTime / data.total / 1000
+      const items = bySkill[name] || []
+      // Mastery pakai seluruh history (pencapaian permanen)
+      const overall = computeMastery(items)
+      // Display pakai session terbaru
+      const display = computeSessionStats(items, cutoffAt)
+
       let status: 'done' | 'prog' | 'lock' = 'prog'
-      if (acc >= 90 && avg <= 5) {
+      if (overall.mastered) {
         status = 'done'
       } else if (!unlocked) {
         status = 'lock'
       }
+
       if (status === 'done') {
         unlocked = true
       } else if (status === 'prog') {
         unlocked = false
       }
-      return { name, accuracy: acc, avgTime: avg, status }
+
+      return {
+        name,
+        accuracy: display.accuracy,
+        avgTime: display.avgTime,
+        status,
+      }
     })
   }
 
   const fetchSkills = async () => {
     const { data: attempts } = await supabase
       .from('attempts')
-      .select('is_correct, response_time_ms, facts!inner(skill)')
+      .select('is_correct, response_time_ms, created_at, facts!inner(skill)')
       .eq('child_id', child.id)
 
-    const skillData: Record<string, { correct: number; total: number; totalTime: number }> = {}
-    if (attempts) {
-      attempts.forEach((a: any) => {
-        const skill = a.facts?.skill
-        if (!skill) return
-        if (!skillData[skill]) skillData[skill] = { correct: 0, total: 0, totalTime: 0 }
-        skillData[skill].total += 1
-        if (a.is_correct) skillData[skill].correct += 1
-        skillData[skill].totalTime += a.response_time_ms
-      })
-    }
-
-    setAddSkills(processSkills(ADDITION_SKILL_ORDER, skillData))
-    setMulSkills(processSkills(MULTIPLY_SKILL_ORDER, skillData))
+    const all = attempts as any[] || []
+    setAddSkills(processSkills(ADDITION_SKILL_ORDER, all))
+    setMulSkills(processSkills(MULTIPLY_SKILL_ORDER, all))
   }
 
   const renderSkillGroup = (title: string, skills: SkillStat[]) => (

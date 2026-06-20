@@ -14,25 +14,47 @@ export default function DashboardPanel({ child }: DashboardPanelProps) {
     fetchStats()
   }, [child])
 
+  const SESSION_GAP_MS = 5 * 60 * 1000
+
+  const getCutoffAt = (items: any[]): number => {
+    if (items.length === 0) return 0
+    const sorted = [...items].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+    const latestTime = new Date(sorted[0].created_at).getTime()
+    let cutoff = latestTime
+    for (let i = 1; i < sorted.length; i++) {
+      const itemTime = new Date(sorted[i].created_at).getTime()
+      if (latestTime - itemTime > SESSION_GAP_MS) break
+      cutoff = Math.min(cutoff, itemTime)
+    }
+    return cutoff
+  }
+
   const fetchStats = async () => {
     const { data: attempts } = await supabase
       .from('attempts')
-      .select('fact_id, is_correct, response_time_ms, facts(question, answer)')
+      .select('fact_id, is_correct, response_time_ms, created_at, facts(question, answer)')
       .eq('child_id', child.id)
 
     if (!attempts) return
 
+    const cutoffAt = getCutoffAt(attempts as any[])
+    const sessionAttempts = attempts.filter(
+      a => new Date(a.created_at).getTime() >= cutoffAt
+    ) as any[]
+
     const factStats: Record<number, { correct: number, total: number, totalTime: number, question: string }> = {}
-    
-    attempts.forEach((a: any) => {
+
+    for (const a of sessionAttempts) {
       const fid = a.fact_id
       if (!factStats[fid]) {
         factStats[fid] = { correct: 0, total: 0, totalTime: 0, question: a.facts.question }
       }
       factStats[fid].total += 1
       if (a.is_correct) factStats[fid].correct += 1
-      factStats[fid].totalTime += a.response_time_ms
-    })
+      factStats[fid].totalTime += a.response_time_ms || 0
+    }
 
     const stats: ChildStats[] = Object.entries(factStats).map(([fid, data]) => ({
       fact_id: parseInt(fid),
