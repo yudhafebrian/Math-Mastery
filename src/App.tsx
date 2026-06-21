@@ -85,7 +85,7 @@ export default function App() {
     const totalTime = atts.reduce((s: number, a: any) => s + (a.response_time_ms || 0), 0)
     const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0
     const avgTimeMs = total > 0 ? totalTime / total : 999000
-    const mastery = accuracy >= 90 && avgTimeMs <= 5000 && total > 0
+    const mastery = accuracy >= 90 && avgTimeMs <= 6000 && total > 0
     return { mastery, accuracy, avgTimeMs }
   }
 
@@ -100,7 +100,7 @@ export default function App() {
       const totalTime = atts.reduce((s: number, a: any) => s + (a.response_time_ms || 0), 0)
       const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0
       const avgTimeMs = total > 0 ? totalTime / total : 999000
-      const mastered = accuracy >= 90 && avgTimeMs <= 5000 && total > 0
+      const mastered = accuracy >= 90 && avgTimeMs <= 6000 && total > 0
       const locked = !allPreviousMastered
       result[skillName] = { accuracy, avgTime: avgTimeMs / 1000, attemptsCount: total, mastered, locked }
       if (!mastered) {

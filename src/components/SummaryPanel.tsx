@@ -23,7 +23,7 @@ export default function SummaryPanel({
   const title = mastered ? 'Skill Mastered!' : 'Session Complete'
   const hint = mastered
     ? `You unlocked: ${nextSkill || 'All skills in this domain mastered!'}`
-    : 'Need ≥90% accuracy AND ≤5s avg time to unlock the next skill'
+    : 'Need ≥90% accuracy AND ≤6s avg time to unlock the next skill'
 
   return (
     <div className="panel-summary">

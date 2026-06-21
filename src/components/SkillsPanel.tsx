@@ -39,22 +39,22 @@ export default function SkillsPanel({ child }: SkillsPanelProps) {
     return cutoff
   }
 
-  // Hybrid: status pakai seluruh history, display stats pakai session terbaru
+  // Mastery pakai seluruh history (achievement permanen)
   const computeMastery = (items: any[]): { accuracy: number; avgTime: number; mastered: boolean } => {
     if (items.length === 0) return { accuracy: 0, avgTime: 0, mastered: false }
     const correct = items.filter(a => a.is_correct).length
     const accuracy = Math.round((correct / items.length) * 100)
     const avg = items.reduce((s, a) => s + (a.response_time_ms || 0), 0) / items.length / 1000
-    const mastered = accuracy >= 90 && avg <= 5
+    const mastered = accuracy >= 90 && avg <= 6
     return { accuracy, avgTime: avg, mastered }
   }
 
-  const computeSessionStats = (items: any[], cutoffAt: number): { accuracy: number; avgTime: number } => {
-    const sessionItems = items.filter(a => new Date(a.created_at).getTime() >= cutoffAt)
-    if (sessionItems.length === 0) {
-      // Fallback: pakai seluruh history
-      return computeMastery(items)
-    }
+  // Session stats pakai window sessions per-skill
+  const computeSessionStats = (skillItems: any[]): { accuracy: number; avgTime: number } => {
+    if (skillItems.length === 0) return computeMastery(skillItems)
+    const cutoffAt = getCutoffAt(skillItems)
+    const sessionItems = skillItems.filter(a => new Date(a.created_at).getTime() >= cutoffAt)
+    if (sessionItems.length === 0) return computeMastery(skillItems)
     const correct = sessionItems.filter(a => a.is_correct).length
     const accuracy = Math.round((correct / sessionItems.length) * 100)
     const avg = sessionItems.reduce((s, a) => s + (a.response_time_ms || 0), 0) / sessionItems.length / 1000
@@ -62,7 +62,7 @@ export default function SkillsPanel({ child }: SkillsPanelProps) {
   }
 
   const processSkills = (order: string[], allAttempts: any[]): SkillStat[] => {
-    const cutoffAt = getCutoffAt(allAttempts)
+    // Group by skill first
     const bySkill: Record<string, any[]> = {}
     for (const a of allAttempts) {
       const skill = a.facts?.skill
@@ -76,8 +76,8 @@ export default function SkillsPanel({ child }: SkillsPanelProps) {
       const items = bySkill[name] || []
       // Mastery pakai seluruh history (pencapaian permanen)
       const overall = computeMastery(items)
-      // Display pakai session terbaru
-      const display = computeSessionStats(items, cutoffAt)
+      // Display pakai session terbaru PER SKILL (fix: bukan global cutoff)
+      const display = computeSessionStats(items)
 
       let status: 'done' | 'prog' | 'lock' = 'prog'
       if (overall.mastered) {
