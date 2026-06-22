@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { Child, Fact, Domain, Tab, AnswerRecord } from './types'
+import { Child, Fact, Domain, Tab, AnswerRecord, LastSessionSummary } from './types'
 import { ADDITION_SKILL_ORDER, MULTIPLY_SKILL_ORDER } from './lib/gameData'
 import Topbar from './components/Topbar'
 import Nav from './components/Nav'
@@ -57,6 +57,7 @@ export default function App() {
     correctCount: number; wrongCount: number; avgTime: number;
     accuracy: number; mastered: boolean; nextSkill: string | null
   } | null>(null)
+  const [lastSessionSummary, setLastSessionSummary] = useState<LastSessionSummary | null>(null)
 
   useEffect(() => { fetchChildren(); fetchFacts() }, [])
   useEffect(() => { if (selectedChild) fetchAttempts() }, [selectedChild])
@@ -72,7 +73,7 @@ export default function App() {
   const fetchAttempts = async () => {
     if (!selectedChild) return []
     const { data } = await supabase
-      .from('attempts').select('*, facts!inner(skill, domain)')
+      .from('attempts').select('*, facts!inner(skill, domain, question)')
       .eq('child_id', selectedChild.id).order('created_at', { ascending: true })
     if (data) setAllAttempts(data)
     return data || []
@@ -195,6 +196,20 @@ export default function App() {
     let nextSkill: string | null = null
     if (mastered && idx < order.length - 1) nextSkill = order[idx + 1]
 
+    // Build lastSessionSummary dari sessionAttempts yang exact — tidak ada timestamp heuristic
+    const perFact: LastSessionSummary['perFact'] = {}
+    for (const r of atts) {
+      const factObj = facts.find(f => f.id === r.factId)
+      if (!factObj) continue
+      if (!perFact[r.factId]) {
+        perFact[r.factId] = { question: factObj.question, correct: 0, total: 0, totalTimeMs: 0 }
+      }
+      perFact[r.factId].total++
+      if (r.correct) perFact[r.factId].correct++
+      perFact[r.factId].totalTimeMs += r.responseTimeMs
+    }
+    setLastSessionSummary({ skill: activeSkill, domain: selectedDomain, perFact })
+
     setSessionResult({ correctCount, wrongCount, avgTime, accuracy, mastered, nextSkill })
     setPhase('done')
     setAppView('summary')
@@ -218,8 +233,8 @@ export default function App() {
       <Nav activeTab={currentTab} onTabChange={handleTabChange} />
 
       <div className="screen-container">
-        {currentTab === 'skills' && selectedChild ? <SkillsPanel child={selectedChild} />
-          : currentTab === 'dashboard' && selectedChild ? <DashboardPanel child={selectedChild} />
+        {currentTab === 'skills' && selectedChild ? <SkillsPanel allAttempts={allAttempts} lastSessionSummary={lastSessionSummary} />
+          : currentTab === 'dashboard' && selectedChild ? <DashboardPanel child={selectedChild} lastSessionSummary={lastSessionSummary} />
           : appView === 'home' ? (
             <StartPanel
               children={children} selectedChild={selectedChild} onSelectChild={setSelectedChild}

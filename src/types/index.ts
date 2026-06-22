@@ -36,6 +36,21 @@ export interface AnswerRecord {
   responseTimeMs: number
 }
 
+// Per-fact stats dari satu sesi, keyed by factId
+export interface FactSessionStat {
+  question: string
+  correct: number
+  total: number
+  totalTimeMs: number
+}
+
+// Summary sesi terakhir yang di-pass langsung ke SkillsPanel & DashboardPanel
+export interface LastSessionSummary {
+  skill: string
+  domain: 'addition' | 'multiplication'
+  perFact: Record<number, FactSessionStat>
+}
+
 export type Domain = 'addition' | 'multiplication'
 
 export type Tab = 'practice' | 'skills' | 'dashboard'
